@@ -1,0 +1,58 @@
+name: Deploy to Server using Minikube
+
+on:
+    workflow_dispatch:
+    push:
+        branches:
+            - main
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+
+        steps:
+            -  name: Checkout Repository
+               uses: actions/checkout@v3
+
+            -  name: SSH into seever and deploy
+               uses: appleboy/ssh-action@v1.0.0
+               With:
+                   host: ${{ secrets.SERVER_IP }}
+                   username: ${{ secrets.SERVER_USER }}
+                   key: ${{ secrets.SSH_PRIVATE_KEY }}
+                   script: |
+                       sudo apt-get update -y
+
+                       sudo apt-get install ca-certificates curl
+                       sudo install -m 0755 -d /etc/apt/keyrings
+                       sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+                       sudo chmod a+r /etc/apt/keyrings/docker.asc
+                       echo \ "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] \ 
+                       https://download.docker.com/linux/ubuntu \ $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+                       sudo apt-get update -y
+
+                       sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
+                       sudo systemctl enable docker
+                       sudo systemctl start docker
+
+                       sudo usermod -aG docker $USER
+
+                       newgrp docker
+
+                       if ! command -v minikube &> /dev/null; then
+                        echo "Installing Minikube..."
+                        curl -LO https://github.com/kubernetes/minikube/releases/latest/download/minikube-linux-amd64
+                        sudo install minikube-linux-amd64 /usr/local/bin/minikube && rm minikube-linux-amd64
+                       fi
+                       sudo minikube start --driver=docker || true
+
+                       if [ ! -d "full-stack-app"]; then
+                        git clone https://gitlab.com/
+                       else
+                        cd full-stack-app && git pull origin main
+                       fi
+
+                       cd full-stack-app
+
+                       kubectl apply -f kubernetes/
