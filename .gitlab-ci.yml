@@ -15,7 +15,7 @@ deploy_to_server:
 
   script:
     - |
-      ssh -i "$SSH_KEY" \
+      ssh -v -i "$SSH_KEY" \
           -o StrictHostKeyChecking=no \
           -o IdentitiesOnly=yes \
           ${SERVER_USER}@${SERVER_IP} "
