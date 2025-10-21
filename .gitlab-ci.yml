@@ -11,20 +11,15 @@ deploy_to_server:
 
   before_script:
     - 'command -v ssh-agent >/dev/null || ( apk add --update openssh-client )'
-    - 'command -v curl >/dev/null || ( apk add --update curl )'
-
-    - eval $(ssh-agent -s)
-
-    - echo "$SSH_KEY" | tr -d '\r' | ssh-add -
-
-    - mkdir -p ~/.ssh
-    - chmod 700 ~/.ssh
-    - echo "$SSH_KNOWN_HOSTS" >> ~/.ssh/known_hosts
-    - chmod 644 ~/.ssh/known_hosts
+    # IMPORTANT: The private key file must have strict permissions.
+    - chmod 600 "$SSH_PRIVATE_KEY"
 
   script:
     - |
-      ssh ${SERVER_USER}@${SERVER_IP} "
+      ssh -i "$SSH_PRIVATE_KEY" \
+          -o StrictHostKeyChecking=no \
+          -o IdentitiesOnly=yes \
+          ${SERVER_USER}@${SERVER_IP} "
         echo '--- Connected to server ---'
 
         if ! command -v docker &> /dev/null; then
