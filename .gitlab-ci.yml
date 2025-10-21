@@ -11,12 +11,11 @@ deploy_to_server:
 
   before_script:
     - 'command -v ssh-agent >/dev/null || ( apk add --update openssh-client )'
-    # IMPORTANT: The private key file must have strict permissions.
-    - chmod 600 "$SSH_PRIVATE_KEY"
+    - chmod 600 "$SSH_KEY"
 
   script:
     - |
-      ssh -i "$SSH_PRIVATE_KEY" \
+      ssh -i "$SSH_KEY" \
           -o StrictHostKeyChecking=no \
           -o IdentitiesOnly=yes \
           ${SERVER_USER}@${SERVER_IP} "
@@ -33,7 +32,6 @@ deploy_to_server:
           sudo apt-get update -y
           sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
           sudo usermod -aG docker \${USER}
-          echo 'Docker installed. Note: A system reboot or new login session might be needed for user group changes to take effect.'
         else
           echo 'Docker is already installed.'
         fi
@@ -42,8 +40,6 @@ deploy_to_server:
           echo 'Minikube not found. Installing...'
           curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
           sudo install minikube-linux-amd64 /usr/local/bin/minikube && rm minikube-linux-amd64
-          # Start minikube using the docker driver, requires user to be in the docker group.
-          # This might fail on first run if the user group hasn't been re-evaluated.
           newgrp docker << END
           minikube start --driver=docker
           END
